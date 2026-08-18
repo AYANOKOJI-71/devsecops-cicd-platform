@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+
+# Environment and editor artifacts
+.env
+.env.*
+!.env.example
+.DS_Store
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+crash.log
+crash.*.log
+*.tfvars
+!*.tfvars.example
+
+# Security reports and local deployment output
+reports/
+coverage.xml
+kubeconfig

@@ -1,0 +1,76 @@
+name: Security Gates
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  trivy-filesystem:
+    name: Trivy filesystem, secret, and IaC scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Scan repository
+        run: >-
+          docker run --rm
+          -v "$GITHUB_WORKSPACE:/workspace:ro"
+          -w /workspace
+          aquasec/trivy@sha256:ee940acbf1f58ebadb42d01434ce4609530bf1b52536afbd1eee66cd7123c5c9
+          fs --scanners vuln,secret,misconfig
+          --exit-code 1
+          --severity HIGH,CRITICAL
+          --ignore-unfixed
+          .
+
+  trivy-image:
+    name: Trivy container image scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Build local image for scanning
+        run: docker build --tag delivery-api:security-scan .
+      - name: Scan image
+        run: >-
+          docker run --rm
+          -v /var/run/docker.sock:/var/run/docker.sock
+          aquasec/trivy@sha256:ee940acbf1f58ebadb42d01434ce4609530bf1b52536afbd1eee66cd7123c5c9
+          image --exit-code 1
+          --severity HIGH,CRITICAL
+          --ignore-unfixed
+          delivery-api:security-scan
+
+  sonar-analysis:
+    name: SonarQube or SonarCloud analysis
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+    steps:
+      - name: Check out source with full history
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+      - name: Run Sonar analysis when configured
+        if: env.SONAR_TOKEN != ''
+        uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602 # v6
+        env:
+          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ env.SONAR_HOST_URL }}
+      - name: Explain skipped analysis
+        if: env.SONAR_TOKEN == ''
+        run: echo "::notice::Sonar analysis is skipped until the SONAR_TOKEN secret is configured."

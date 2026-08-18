@@ -1,0 +1,9 @@
+aws_region        = "ap-southeast-1"
+project_name      = "devsecops-cicd-platform"
+environment       = "production"
+github_repository = "AYANOKOJI-71/devsecops-cicd-platform"
+github_subject    = "repo:AYANOKOJI-71/devsecops-cicd-platform:environment:production"
+
+# Set only when connecting this portfolio project to an existing EKS cluster
+# with authentication mode API_AND_CONFIG_MAP or API.
+# eks_cluster_name = "your-existing-cluster"

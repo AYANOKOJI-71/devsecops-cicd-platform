@@ -1,0 +1,50 @@
+name: Deploy to Production EKS
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_digest:
+        description: "Trusted GHCR image digest in sha256:<64 lowercase hex characters> format"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    name: Deploy approved image digest
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_ROLE_TO_ASSUME: ${{ vars.AWS_ROLE_TO_ASSUME }}
+      EKS_CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME }}
+      IMAGE_DIGEST: ${{ inputs.image_digest }}
+    steps:
+      - name: Check out deployment configuration
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Validate deployment configuration
+        run: |
+          set -euo pipefail
+          [[ "$IMAGE_DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "Invalid image digest."; exit 1; }
+          [[ -n "$AWS_REGION" && -n "$AWS_ROLE_TO_ASSUME" && -n "$EKS_CLUSTER_NAME" ]] || {
+            echo "Missing required production environment variables."; exit 1;
+          }
+      - name: Configure short-lived AWS credentials through OIDC
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v5
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          role-session-name: github-actions-production-deploy
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Configure kubectl for the target cluster
+        run: aws eks update-kubeconfig --name "$EKS_CLUSTER_NAME" --region "$AWS_REGION"
+      - name: Render and apply the immutable image deployment
+        run: |
+          set -euo pipefail
+          kubectl kustomize k8s/overlays/prod | \
+            sed "s|:__IMAGE_TAG__|@$IMAGE_DIGEST|g" | \
+            kubectl apply --server-side --field-manager=github-actions -f -
+      - name: Verify rollout
+        run: kubectl rollout status deployment/delivery-api --namespace devsecops-platform --timeout=180s
