@@ -78,6 +78,11 @@ def validate_workflows() -> None:
     codeql_permissions = load_yaml(WORKFLOW_DIR / "codeql.yml").get("permissions", {})
     if codeql_permissions.get("actions") != "read":
         fail("CodeQL workflow must grant actions: read for workflow-run metadata")
+    codeql_source = (WORKFLOW_DIR / "codeql.yml").read_text(encoding="utf-8")
+    if "upload: never" not in codeql_source or "upload-database: false" not in codeql_source:
+        fail("Private-repository CodeQL workflow must disable unsupported result uploads")
+    if "security-events: write" in codeql_source:
+        fail("Analyze-only CodeQL workflow must not request security-events: write")
 
 
 def validate_kubernetes() -> None:

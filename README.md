@@ -79,7 +79,7 @@ docker run --rm -p 8080:8080 \
 | --- | --- | --- | --- |
 | `Quality Gate` | Pull request, push, manual | Runs Ruff and pytest. | Read-only repository token. |
 | `Security Gates` | Pull request, push, weekly, manual | Scans source, secrets, IaC, and a locally built container with Trivy. Optionally runs Sonar analysis. | The Trivy image is pinned by digest. Sonar is skipped—not silently passed—until its token is configured. |
-| `CodeQL` | Pull request, push, weekly, manual | Performs Python code scanning. | Grants only `actions: read`, `contents: read`, and `security-events: write`, including the workflow-read access required for result handling. |
+| `CodeQL` | Pull request, push, weekly, manual | Runs CodeQL Python queries and fails if the analysis itself cannot complete. | The repository is private without GitHub Code Security, so SARIF and database uploads are deliberately disabled; this avoids an unsupported GitHub Code Scanning upload while retaining analysis in the workflow logs. |
 | `Release Container` | Version tag or manual | Publishes a release image to GitHub Container Registry. | Runs only with package write permission. |
 | `Deploy to Production EKS` | Manual only | Deploys a validated image digest to Kubernetes. | Requires the protected `production` environment, OIDC, exact-digest validation, and rollout verification. |
 
@@ -136,7 +136,7 @@ make validate
 
 ## Limitations and Next Steps
 
-This is a secure **reference platform**, not a live cloud deployment. A real production rollout still requires an AWS account, an EKS cluster, Sonar configuration if desired, protected GitHub environments, and appropriate organizational review. Future improvements can add signed images with Sigstore, SBOM generation and attestation, a dedicated EKS/VPC Terraform module, policy-as-code admission control, and centralized observability.
+This is a secure **reference platform**, not a live cloud deployment. A real production rollout still requires an AWS account, an EKS cluster, Sonar configuration if desired, protected GitHub environments, and appropriate organizational review. The private repository currently runs CodeQL in analysis-only mode because GitHub Code Scanning uploads require GitHub Code Security for private repositories. If the repository becomes public or GitHub Code Security is enabled later, the workflow can restore SARIF uploads and Security-tab alerts. Future improvements can add signed images with Sigstore, SBOM generation and attestation, a dedicated EKS/VPC Terraform module, policy-as-code admission control, and centralized observability.
 
 ## Author
 
