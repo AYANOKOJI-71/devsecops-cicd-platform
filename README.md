@@ -34,7 +34,7 @@ The pipeline uses minimum GitHub token permissions, a manually dispatched produc
 
 | Layer | Included controls |
 | --- | --- |
-| **Application quality** | FastAPI operational endpoints, pytest contract tests, Ruff linting, and pinned Python runtime. |
+| **Application quality** | FastAPI operational endpoints, pytest contract tests, Ruff linting, and an explicit Python 3.12 Debian Trixie slim runtime. |
 | **Source and IaC security** | CodeQL, Trivy vulnerability/secret/misconfiguration scans, and a weekly scheduled scan. |
 | **Container supply chain** | Non-root image, no package cache, health check, immutable release tags, and digest-based deployment. |
 | **Kubernetes hardening** | Two replicas, resource limits, health probes, read-only root filesystem, dropped capabilities, restricted seccomp, network policy, PDB, HPA, and namespace-scoped RBAC. |
@@ -79,7 +79,7 @@ docker run --rm -p 8080:8080 \
 | --- | --- | --- | --- |
 | `Quality Gate` | Pull request, push, manual | Runs Ruff and pytest. | Read-only repository token. |
 | `Security Gates` | Pull request, push, weekly, manual | Scans source, secrets, IaC, and a locally built container with Trivy. Optionally runs Sonar analysis. | The Trivy image is pinned by digest. Sonar is skipped—not silently passed—until its token is configured. |
-| `CodeQL` | Pull request, push, weekly, manual | Performs Python code scanning. | Only the security-events permission is added. |
+| `CodeQL` | Pull request, push, weekly, manual | Performs Python code scanning. | Grants only `actions: read`, `contents: read`, and `security-events: write`, including the workflow-read access required for result handling. |
 | `Release Container` | Version tag or manual | Publishes a release image to GitHub Container Registry. | Runs only with package write permission. |
 | `Deploy to Production EKS` | Manual only | Deploys a validated image digest to Kubernetes. | Requires the protected `production` environment, OIDC, exact-digest validation, and rollout verification. |
 
@@ -99,7 +99,7 @@ Do not put account IDs, role ARNs, API tokens, kubeconfigs, or Terraform state i
 
 ## Kubernetes and Infrastructure
 
-The Kubernetes base configuration is in [`k8s/base`](k8s/base) and the production overlay is in [`k8s/overlays/prod`](k8s/overlays/prod). The deployment workflow replaces `__IMAGE_TAG__` with a validated image digest before applying the rendered manifests, keeping the release traceable to the exact scanned image.
+The Kubernetes base configuration is in [`k8s/base`](k8s/base) and the production overlay is in [`k8s/overlays/prod`](k8s/overlays/prod). A cluster administrator applies or updates these platform manifests during controlled bootstrap. The production workflow deliberately has a narrower responsibility: it can patch and observe only the named `delivery-api` Deployment, replacing its container image with a validated digest. This keeps the release traceable while preventing the CI/CD identity from mutating Services, NetworkPolicies, RBAC, or other platform resources.
 
 The Terraform module in [`terraform`](terraform) provisions an immutable, scan-on-push ECR repository and an optional GitHub OIDC provider plus least-privilege deployment role. It deliberately targets a **pre-existing EKS cluster** rather than attempting to create a costly cluster automatically. The module is therefore suitable as a secure delivery foundation and a clear extension point for a dedicated EKS/VPC module.
 

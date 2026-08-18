@@ -65,12 +65,19 @@ def validate_workflows() -> None:
     required_deployment_controls = [
         "environment: production",
         "id-token: write",
-        "kubectl rollout status",
+        "kubectl --namespace devsecops-platform set image deployment/delivery-api",
+        "rollout status deployment/delivery-api",
         "^sha256:[a-f0-9]{64}$",
     ]
     for control in required_deployment_controls:
         if control not in deploy_source:
             fail(f"Deployment workflow is missing control: {control}")
+    if "kubectl apply" in deploy_source:
+        fail("Deployment workflow must not apply arbitrary Kubernetes manifests")
+
+    codeql_permissions = load_yaml(WORKFLOW_DIR / "codeql.yml").get("permissions", {})
+    if codeql_permissions.get("actions") != "read":
+        fail("CodeQL workflow must grant actions: read for workflow-run metadata")
 
 
 def validate_kubernetes() -> None:
@@ -106,6 +113,18 @@ def validate_kubernetes() -> None:
         if control not in deployment_source:
             fail(f"Kubernetes deployment is missing hardening control: {control}")
 
+    deployer_role = load_yaml(K8S_DIR / "base" / "role.yaml")
+    expected_role_rules = [
+        {
+            "apiGroups": ["apps"],
+            "resources": ["deployments"],
+            "resourceNames": ["delivery-api"],
+            "verbs": ["get", "watch", "patch"],
+        }
+    ]
+    if deployer_role.get("rules") != expected_role_rules:
+        fail("Deployment Role must only patch and observe the delivery-api Deployment")
+
 
 def validate_terraform() -> None:
     """Parse all Terraform files and confirm no state files were added to the module."""
@@ -126,7 +145,7 @@ def validate_dockerfile() -> None:
     """Check the Dockerfile for explicit non-root execution and a health check."""
 
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
-    for control in ["USER appuser", "HEALTHCHECK", "python:3.12-slim"]:
+    for control in ["USER appuser", "HEALTHCHECK", "python:3.12.14-slim-trixie"]:
         if control not in dockerfile:
             fail(f"Dockerfile is missing control: {control}")
 

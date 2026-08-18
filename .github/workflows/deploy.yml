@@ -22,6 +22,7 @@ jobs:
       AWS_ROLE_TO_ASSUME: ${{ vars.AWS_ROLE_TO_ASSUME }}
       EKS_CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME }}
       IMAGE_DIGEST: ${{ inputs.image_digest }}
+      IMAGE_REPOSITORY: ghcr.io/ayanokoji-71/devsecops-cicd-platform
     steps:
       - name: Check out deployment configuration
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -40,11 +41,10 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
       - name: Configure kubectl for the target cluster
         run: aws eks update-kubeconfig --name "$EKS_CLUSTER_NAME" --region "$AWS_REGION"
-      - name: Render and apply the immutable image deployment
+      - name: Roll out only the approved immutable image
         run: |
           set -euo pipefail
-          kubectl kustomize k8s/overlays/prod | \
-            sed "s|:__IMAGE_TAG__|@$IMAGE_DIGEST|g" | \
-            kubectl apply --server-side --field-manager=github-actions -f -
+          kubectl --namespace devsecops-platform set image deployment/delivery-api \
+            "delivery-api=$IMAGE_REPOSITORY@$IMAGE_DIGEST"
       - name: Verify rollout
-        run: kubectl rollout status deployment/delivery-api --namespace devsecops-platform --timeout=180s
+        run: kubectl --namespace devsecops-platform rollout status deployment/delivery-api --timeout=180s
