@@ -145,7 +145,12 @@ def validate_dockerfile() -> None:
     """Check the Dockerfile for explicit non-root execution and a health check."""
 
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
-    for control in ["USER appuser", "HEALTHCHECK", "python:3.12.14-slim-trixie"]:
+    for control in [
+        "USER appuser",
+        "HEALTHCHECK",
+        "python:3.12.14-slim-trixie",
+        "apt-get upgrade -y",
+    ]:
         if control not in dockerfile:
             fail(f"Dockerfile is missing control: {control}")
 
