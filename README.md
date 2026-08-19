@@ -140,7 +140,7 @@ This is a secure **reference platform**, not a live cloud deployment. A real pro
 
 ## Author
 
-Built by **Sarowar Hossain Rony** as a portfolio project demonstrating DevSecOps delivery practices across GitHub Actions, Docker, Kubernetes, Terraform, SonarQube, Trivy, and AWS.
+Built by **Sarowar Hossain Rony** as a project demonstrating DevSecOps delivery practices across GitHub Actions, Docker, Kubernetes, Terraform, SonarQube, Trivy, and AWS.
 
 ## References
 
