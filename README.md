@@ -5,7 +5,7 @@
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-hardened%20manifests-326CE5?logo=kubernetes&logoColor=white)
 ![Terraform](https://img.shields.io/badge/Terraform-AWS%20foundation-7B42BC?logo=terraform&logoColor=white)
 
-**DevSecOps CI/CD Platform** is a portfolio-ready reference implementation that demonstrates how a small API can be delivered through a security-gated pipeline. It combines automated quality checks, static analysis, filesystem, secret, infrastructure, and container scans, immutable image publication, Kubernetes workload hardening, and an AWS OIDC/Terraform foundation—without committing credentials or creating cloud resources by default.
+**DevSecOps CI/CD Platform** is an implementation that demonstrates how a small API can be delivered through a security-gated pipeline. It combines automated quality checks, static analysis, filesystem, secret, infrastructure, and container scans, immutable image publication, Kubernetes workload hardening, and an AWS OIDC/Terraform foundation—without committing credentials or creating cloud resources by default.
 
 > **Design goal:** A release must be tested, scanned, traceable to an immutable image, and explicitly approved before it can reach a production Kubernetes cluster.
 
