@@ -9,6 +9,16 @@
 
 > **Design goal:** A release must be tested, scanned, traceable to an immutable image, and explicitly approved before it can reach a production Kubernetes cluster.
 
+## Project Overview
+
+I built this project to explore how software delivery, cloud infrastructure, security automation, and operational reliability can work together in one maintainable platform. The motivation was to address a common deployment problem: teams often optimize for delivery speed while treating security and traceability as separate concerns. This platform makes security a required part of the release process rather than a final manual check.
+
+The project demonstrates the complete path from a small FastAPI service to a hardened Kubernetes workload. I personally designed the architecture, implemented the application and tests, created the GitHub Actions workflows, hardened the Docker image and Kubernetes manifests, and wrote the Terraform infrastructure and documentation. The API exposes health, readiness, and version endpoints, while the pipeline enforces Ruff and pytest quality gates, CodeQL analysis, Trivy vulnerability/secret/infrastructure scans, and container-image scanning before a release can be published.
+
+For deployment, I used Terraform to define the Amazon ECR repository and GitHub OIDC trust relationship. Instead of storing long-lived AWS credentials in GitHub, the deployment workflow obtains short-lived credentials and restricts trust to the exact repository and protected production environment. The production workflow is manual, validates the approved immutable image digest, updates only the intended Kubernetes deployment, and verifies the rollout. I also applied Kubernetes controls such as non-root execution, resource limits, health probes, read-only storage, dropped capabilities, restricted seccomp, network policies, PodDisruptionBudget, HPA, and namespace-scoped RBAC.
+
+This is currently a secure reference implementation rather than a live production deployment. That distinction is intentional: the repository is safe to inspect and run locally without cloud credentials, while its Terraform and deployment configuration provide a clear foundation for connecting to an existing AWS/EKS environment under controlled review.
+
 ## Architecture
 
 ```mermaid
